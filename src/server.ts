@@ -1,9 +1,14 @@
-import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
-import fjwt, { JWT } from '@fastify/jwt';
+import Fastify from 'fastify';
+import { JWT } from '@fastify/jwt';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { withRefResolver } from 'fastify-zod';
 import { version } from '../package.json';
+import { authSchemas } from 'features/auth/auth.schema';
+import authRoutes from 'features/auth/auth.routes';
+import { fastifyCors } from '@fastify/cors';
+import { CONFIG } from 'config/config';
+import jwtPlugin from 'plugins/jwt.plugin';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -19,39 +24,25 @@ declare module '@fastify/jwt' {
     user: {
       id: number;
       email: string;
-      name: string;
+      name: string | null;
     };
   }
 }
 
-function buildServer() {
+async function buildServer() {
   const server = Fastify();
 
-  server.register(fjwt, {
-    secret: 'secret',
+  for (const schema of [...authSchemas.schemas]) {
+    server.addSchema(schema);
+  }
+
+  server.register(jwtPlugin);
+
+  await server.register(fastifyCors, {
+    origin: CONFIG.IS_DEV ? 'http://localhost:5173' : true,
   });
 
-  server.decorate(
-    'authenticate',
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        await request.jwtVerify();
-      } catch (e) {
-        return reply.send(e);
-      }
-    }
-  );
-
-  server.addHook('preHandler', (req, reply, next) => {
-    req.jwt = server.jwt;
-    return next();
-  });
-
-  // for (const schema of [...userSchemas, ...productSchemas]) {
-  //   server.addSchema(schema);
-  // }
-
-  server.register(
+  await server.register(
     swagger,
     withRefResolver({
       openapi: {
@@ -64,14 +55,12 @@ function buildServer() {
     })
   );
 
-  server.register(swaggerUi, {
+  await server.register(swaggerUi, {
     routePrefix: '/docs',
-
     staticCSP: true,
   });
 
-  // server.register(userRoutes, { prefix: 'api/users' });
-  // server.register(productRoutes, { prefix: 'api/products' });
+  await server.register(authRoutes, { prefix: 'api/auth' });
 
   return server;
 }
