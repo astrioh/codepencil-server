@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import fjwt from '@fastify/jwt';
-import { CONFIG } from 'config/config';
+import { CONFIG } from '../config/config';
 import fp from 'fastify-plugin';
 
 export default fp((server) => {

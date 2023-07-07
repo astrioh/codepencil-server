@@ -4,11 +4,11 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { withRefResolver } from 'fastify-zod';
 import { version } from '../package.json';
-import { authSchemas } from 'features/auth/auth.schema';
-import authRoutes from 'features/auth/auth.routes';
+import jwtPlugin from './plugins/jwt.plugin';
+import { authSchemas } from './features/auth/auth.schema';
+import authRoutes from './features/auth/auth.routes';
 import { fastifyCors } from '@fastify/cors';
-import { CONFIG } from 'config/config';
-import jwtPlugin from 'plugins/jwt.plugin';
+import { CONFIG } from './config/config';
 
 declare module 'fastify' {
   interface FastifyRequest {
