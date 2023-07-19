@@ -39,7 +39,7 @@ async function buildServer() {
   server.register(jwtPlugin);
 
   await server.register(fastifyCors, {
-    origin: CONFIG.IS_DEV ? 'http://localhost:5173' : true,
+    origin: CONFIG.CORS_ORIGIN,
   });
 
   await server.register(

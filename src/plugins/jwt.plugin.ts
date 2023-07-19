@@ -3,7 +3,7 @@ import fjwt from '@fastify/jwt';
 import { CONFIG } from '../config/config';
 import fp from 'fastify-plugin';
 
-export default fp((server) => {
+export default fp(async (server) => {
   server.register(fjwt, {
     secret: CONFIG.JWT_SECRET,
   });
@@ -12,7 +12,7 @@ export default fp((server) => {
     'authenticate',
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        await request.jwtVerify();
+        return request.jwtVerify();
       } catch (e) {
         return reply.send(e);
       }
