@@ -1,5 +1,9 @@
 import { FastifyInstance } from 'fastify';
-import { loginHandler, registerUserHandler } from './auth.controller';
+import {
+  getCurrentUserHandler,
+  loginHandler,
+  registerUserHandler,
+} from './auth.controller';
 import { authSchemas } from './auth.schema';
 
 async function authRoutes(server: FastifyInstance) {
@@ -27,6 +31,18 @@ async function authRoutes(server: FastifyInstance) {
       },
     },
     loginHandler
+  );
+
+  server.get(
+    '/me',
+    {
+      schema: {
+        response: {
+          200: authSchemas.$ref('userResponseSchema'),
+        },
+      },
+    },
+    getCurrentUserHandler
   );
 }
 

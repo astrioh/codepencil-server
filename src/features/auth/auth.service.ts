@@ -1,6 +1,8 @@
+import { JWT } from '@fastify/jwt';
 import { hashPassword } from '../../utils/hash';
 import prisma from '../../utils/prisma';
 import type { CreateUserInput } from './auth.schema';
+import { JWTPayload } from './types';
 
 export async function createUser(input: CreateUserInput) {
   const { password, ...rest } = input;
@@ -12,6 +14,22 @@ export async function createUser(input: CreateUserInput) {
   });
 
   return user;
+}
+
+export async function signAndSetTokens(
+  { id, name, email }: JWTPayload,
+  jwt: JWT
+) {
+  const accessToken = jwt.sign({ id, name, email }, { expiresIn: '1h' });
+
+  const refreshToken = jwt.sign({ id, name, email }, { expiresIn: '30d' });
+
+  await setRefreshToken({ id, refreshToken });
+
+  return {
+    accessToken: accessToken,
+    refreshToken: refreshToken,
+  };
 }
 
 export async function setRefreshToken(data: {

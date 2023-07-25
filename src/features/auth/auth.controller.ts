@@ -1,7 +1,13 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { verifyPassword } from '../../utils/hash';
-import type { CreateUserInput, LoginInput } from './auth.schema';
-import { createUser, findUserByEmail, setRefreshToken } from './auth.service';
+import type {
+  CreateUserInput,
+  GetCurrentUserResponse,
+  LoginInput,
+  LoginResponse,
+  RegisterResponse,
+} from './auth.schema';
+import { createUser, findUserByEmail, signAndSetTokens } from './auth.service';
 
 export async function registerUserHandler(
   request: FastifyRequest<{
@@ -14,10 +20,26 @@ export async function registerUserHandler(
   try {
     const user = await createUser(body);
 
-    return reply.code(201).send(user);
+    const tokens = await signAndSetTokens(
+      { id: user.id, email: user.email, name: user.name },
+      request.jwt
+    );
+
+    const result: RegisterResponse = {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+      jwt: tokens,
+    };
+
+    return reply.code(201).send(result);
   } catch (e) {
-    console.log(e);
-    return reply.code(500).send(e);
+    if (e instanceof Error) {
+      return reply.code(500).send({ message: e.message });
+    }
+    throw e;
   }
 }
 
@@ -44,27 +66,44 @@ export async function loginHandler(
   });
 
   if (correctPassword) {
-    const { id, name, email } = user;
-
-    const accessToken = request.jwt.sign(
-      { id, name, email },
-      { expiresIn: '1h' }
+    const tokens = await signAndSetTokens(
+      { id: user.id, email: user.email, name: user.name },
+      request.jwt
     );
 
-    const refreshToken = request.jwt.sign(
-      { id, name, email },
-      { expiresIn: '30d' }
-    );
-
-    await setRefreshToken({ id, refreshToken });
-
-    return {
-      accessToken: accessToken,
-      refreshToken: refreshToken,
+    const result: LoginResponse = {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+      jwt: tokens,
     };
+
+    return result;
   }
 
   return reply.code(401).send({
     message: 'Invalid email or password',
   });
+}
+
+export async function getCurrentUserHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const userEmail = request.user.email;
+  const user = await findUserByEmail(userEmail);
+
+  if (!user) {
+    return reply.code(404).send({ message: 'User not found' });
+  }
+
+  const result: GetCurrentUserResponse = {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+  };
+
+  return result;
 }
